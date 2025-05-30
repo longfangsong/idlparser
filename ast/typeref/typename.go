@@ -16,6 +16,6 @@ func ParseTypeName(name string) gomme.Result[TypeName, string] {
 				gomme.Alphanumeric0[string](),
 			),
 		)),
-		func(_ string) (TypeName, error) { return TypeName{Name: name}, nil },
+		func(name string) (TypeName, error) { return TypeName{Name: name}, nil },
 	)(name)
 }
