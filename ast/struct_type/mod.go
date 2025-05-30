@@ -6,9 +6,15 @@ import (
 	"github.com/oleiade/gomme"
 )
 
+type Annotation struct {
+	Name   string            `json:"name"`
+	Values map[string]string `json:"values"`
+}
+
 type Field struct {
-	Type typeref.BitFieldType `json:"type"`
-	Name string               `json:"name"`
+	Annotation Annotation           `json:"annotation"`
+	Type       typeref.BitFieldType `json:"type"`
+	Name       string               `json:"name"`
 }
 
 type Struct struct {
@@ -18,20 +24,79 @@ type Struct struct {
 
 func (Struct) IsModuleContent() {}
 
-func parseField(code string) gomme.Result[Field, string] {
-	var bitFieldParser gomme.Parser[string, typeref.BitFieldType] = typeref.ParseBitField
+func parseKVPairs(code string) gomme.Result[map[string]string, string] {
+	return gomme.Map(gomme.SeparatedList0(
+		gomme.SeparatedPair(
+			gomme.Recognize(
+				gomme.Pair(
+					gomme.Alpha1[string](),
+					gomme.Alphanumeric0[string](),
+				)),
+			utils.InEmpty(gomme.Token[string]("=")),
+			gomme.Recognize(
+				gomme.Pair(
+					gomme.Alpha1[string](),
+					gomme.Alphanumeric0[string](),
+				)),
+		),
+		utils.InEmpty(gomme.Token[string](",")),
+	),
+		func(pairs []gomme.PairContainer[string, string]) (map[string]string, error) {
+			values := make(map[string]string)
+			for _, pair := range pairs {
+				values[pair.Left] = pair.Right
+			}
+			return values, nil
+		})(code)
+}
+
+func parseAnnotation(code string) gomme.Result[Annotation, string] {
 	return gomme.Map(
 		gomme.SeparatedPair(
-			bitFieldParser,
-			gomme.Whitespace1[string](),
-			gomme.Recognize(
-				gomme.Pair(gomme.Alpha1[string](), gomme.Alphanumeric0[string]()),
+			gomme.Preceded(
+				gomme.Token[string]("@"),
+				utils.Identifier,
+			),
+			gomme.Whitespace0[string](),
+			gomme.Delimited(
+				gomme.Token[string]("("),
+				parseKVPairs,
+				gomme.Token[string](")"),
 			),
 		),
-		func(output gomme.PairContainer[typeref.BitFieldType, string]) (Field, error) {
+		func(output gomme.PairContainer[string, map[string]string]) (Annotation, error) {
+			return Annotation{
+				Name:   output.Left,
+				Values: output.Right,
+			}, nil
+		},
+	)(code)
+}
+
+func parseField(code string) gomme.Result[Field, string] {
+	var bitFieldParser gomme.Parser[string, typeref.BitFieldType] = typeref.ParseBitField
+	var annotationParser gomme.Parser[string, Annotation] = parseAnnotation
+	var emptyParser gomme.Parser[string, string] = utils.ParseEmpty1
+	return gomme.Map(
+		gomme.SeparatedPair(
+			annotationParser,
+			emptyParser,
+			gomme.SeparatedPair(
+				bitFieldParser,
+				gomme.Whitespace1[string](),
+				gomme.Recognize(
+					gomme.Pair(gomme.Alpha1[string](), gomme.Alphanumeric0[string]()),
+				),
+			),
+		),
+		func(output gomme.PairContainer[
+			Annotation,
+			gomme.PairContainer[typeref.BitFieldType, string],
+		]) (Field, error) {
 			return Field{
-				Type: output.Left,
-				Name: output.Right,
+				Annotation: output.Left,
+				Type:       output.Right.Left,
+				Name:       output.Right.Right,
 			}, nil
 		},
 	)(code)

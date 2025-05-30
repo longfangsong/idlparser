@@ -17,4 +17,14 @@ func TestParse(t *testing.T) {
 	if !ok {
 		t.Errorf("Expected StructType, got %T", result.Output)
 	}
+
+	result = ParseTypeRef("unsigned long")
+	if _, ok := result.Output.(UnsignedLongType); !ok {
+		t.Errorf("Expected UnsignedLongType, got %T", result.Output)
+	}
+
+	result = ParseTypeRef("unsigned long    long")
+	if _, ok := result.Output.(UnsignedLongLongType); !ok {
+		t.Errorf("Expected UnsignedLongLongType, got %T", result.Output)
+	}
 }

@@ -10,12 +10,12 @@ func (TypeName) isTypeRef() {}
 
 func ParseTypeName(name string) gomme.Result[TypeName, string] {
 	return gomme.Map(
-		(gomme.Recognize(
+		gomme.Recognize(
 			gomme.Pair(
 				gomme.Alpha1[string](),
 				gomme.Alphanumeric0[string](),
 			),
-		)),
+		),
 		func(name string) (TypeName, error) { return TypeName{Name: name}, nil },
 	)(name)
 }

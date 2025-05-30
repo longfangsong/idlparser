@@ -9,6 +9,8 @@ type TypeRef interface {
 func ParseTypeRef(code string) gomme.Result[TypeRef, string] {
 	return gomme.Alternative(
 		gomme.Map(ParseByte, func(byte ByteType) (TypeRef, error) { return byte, nil }),
+		gomme.Map(ParseUnsignedLongLong, func(unsignedLongLong UnsignedLongLongType) (TypeRef, error) { return unsignedLongLong, nil }),
+		gomme.Map(ParseUnsignedLong, func(unsignedLong UnsignedLongType) (TypeRef, error) { return unsignedLong, nil }),
 		gomme.Map(ParseLong, func(long LongType) (TypeRef, error) { return long, nil }),
 		gomme.Map(ParseShort, func(short ShortType) (TypeRef, error) { return short, nil }),
 		gomme.Map(ParseBitField, func(bitfield BitFieldType) (TypeRef, error) { return bitfield, nil }),
